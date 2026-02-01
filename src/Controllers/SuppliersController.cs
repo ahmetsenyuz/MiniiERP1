@@ -9,15 +9,17 @@ namespace MiniiERP1.Controllers
     public class SuppliersController : ControllerBase
     {
         private readonly ISupplierService _supplierService;
+        private readonly LoggingService _loggingService;
 
-        public SuppliersController(ISupplierService supplierService)
+        public SuppliersController(ISupplierService supplierService, LoggingService loggingService)
         {
             _supplierService = supplierService;
+            _loggingService = loggingService;
         }
 
-        /// <summary>
-        /// Gets all suppliers
-        /// </summary>
+        // // <summary>
+        // // Gets all suppliers
+        // // </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Supplier>>> GetSuppliers()
         {
@@ -25,9 +27,9 @@ namespace MiniiERP1.Controllers
             return Ok(suppliers);
         }
 
-        /// <summary>
-        /// Gets a supplier by ID
-        /// </summary>
+        // // <summary>
+        // // Gets a supplier by ID
+        // // </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<Supplier>> GetSupplier(int id)
         {
@@ -36,17 +38,28 @@ namespace MiniiERP1.Controllers
             {
                 return NotFound($"Supplier with ID {id} not found.");
             }
+
             return Ok(supplier);
         }
 
-        /// <summary>
-        /// Creates a new supplier
-        /// </summary>
+        // // <summary>
+        // // Creates a new supplier
+        // // </summary>
         [HttpPost]
         public async Task<ActionResult<Supplier>> CreateSupplier(Supplier supplier)
         {
             try
             {
+                var validationResult = ValidationService.ValidateSupplier(supplier);
+                if (!validationResult.IsValid)
+                {
+                    foreach (var error in validationResult.Errors)
+                    {
+                        _loggingService.LogValidationError("CreateSupplier", error);
+                    }
+                    return BadRequest(new { error = validationResult.Errors.FirstOrDefault() });
+                }
+
                 var createdSupplier = await _supplierService.CreateSupplierAsync(supplier);
                 return CreatedAtAction(nameof(GetSupplier), new { id = createdSupplier.Id }, createdSupplier);
             }
@@ -64,19 +77,30 @@ namespace MiniiERP1.Controllers
             }
         }
 
-        /// <summary>
-        /// Updates an existing supplier
-        /// </summary>
+        // // <summary>
+        // // Updates an existing supplier
+        // // </summary>
         [HttpPut("{id}")]
         public async Task<ActionResult<Supplier>> UpdateSupplier(int id, Supplier supplier)
         {
             try
             {
+                var validationResult = ValidationService.ValidateSupplier(supplier);
+                if (!validationResult.IsValid)
+                {
+                    foreach (var error in validationResult.Errors)
+                    {
+                        _loggingService.LogValidationError("UpdateSupplier", error);
+                    }
+                    return BadRequest(new { error = validationResult.Errors.FirstOrDefault() });
+                }
+
                 var updatedSupplier = await _supplierService.UpdateSupplierAsync(id, supplier);
                 if (updatedSupplier == null)
                 {
                     return NotFound($"Supplier with ID {id} not found.");
                 }
+
                 return Ok(updatedSupplier);
             }
             catch (InvalidOperationException ex)
@@ -93,9 +117,9 @@ namespace MiniiERP1.Controllers
             }
         }
 
-        /// <summary>
-        /// Deletes a supplier
-        /// </summary>
+        // // <summary>
+        // // Deletes a supplier
+        // // </summary>
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteSupplier(int id)
         {
@@ -104,6 +128,7 @@ namespace MiniiERP1.Controllers
             {
                 return NotFound($"Supplier with ID {id} not found.");
             }
+
             return Ok(new { message = $"Supplier with ID {id} deleted successfully." });
         }
     }

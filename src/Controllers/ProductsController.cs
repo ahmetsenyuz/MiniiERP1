@@ -9,10 +9,12 @@ namespace MiniiERP1.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly LoggingService _loggingService;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(IProductService productService, LoggingService loggingService)
         {
             _productService = productService;
+            _loggingService = loggingService;
         }
 
         [HttpGet("{id}")]
@@ -20,7 +22,9 @@ namespace MiniiERP1.Controllers
         {
             var product = await _productService.GetProductByIdAsync(id);
             if (product == null)
-                return NotFound();
+            {
+                return NotFound($"Product with ID {id} not found.");
+            }
 
             return Ok(product);
         }
@@ -40,12 +44,21 @@ namespace MiniiERP1.Controllers
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var validationResult = ValidationService.ValidateProduct(product);
+            if (!validationResult.IsValid)
+            {
+                foreach (var error in validationResult.Errors)
+                {
+                    _loggingService.LogValidationError("CreateProduct", error);
+                }
+                return BadRequest(new { errors = validationResult.Errors });
+            }
 
             var createdProduct = await _productService.CreateProductAsync(product);
             if (createdProduct == null)
+            {
                 return BadRequest("SKU must be unique");
+            }
 
             return CreatedAtAction(nameof(GetProduct), new { id = createdProduct.Id }, createdProduct);
         }
@@ -53,15 +66,24 @@ namespace MiniiERP1.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, Product product)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var validationResult = ValidationService.ValidateProduct(product);
+            if (!validationResult.IsValid)
+            {
+                foreach (var error in validationResult.Errors)
+                {
+                    _loggingService.LogValidationError("UpdateProduct", error);
+                }
+                return BadRequest(new { errors = validationResult.Errors });
+            }
 
             var updatedProduct = await _productService.UpdateProductAsync(id, product);
             if (updatedProduct == null)
             {
                 if (await _productService.GetProductByIdAsync(id) == null)
+                {
                     return NotFound();
-                
+                }
+
                 return BadRequest("SKU must be unique");
             }
 
@@ -75,8 +97,10 @@ namespace MiniiERP1.Controllers
             if (!result)
             {
                 if (await _productService.GetProductByIdAsync(id) == null)
+                {
                     return NotFound();
-                
+                }
+
                 return BadRequest("Cannot delete product with associated orders");
             }
 

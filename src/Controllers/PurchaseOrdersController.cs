@@ -9,10 +9,12 @@ namespace MiniiERP1.Controllers
     public class PurchaseOrdersController : ControllerBase
     {
         private readonly IPurchaseOrderService _purchaseOrderService;
+        private readonly LoggingService _loggingService;
 
-        public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService)
+        public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService, LoggingService loggingService)
         {
             _purchaseOrderService = purchaseOrderService;
+            _loggingService = loggingService;
         }
 
         [HttpGet("{id}")]
@@ -37,9 +39,14 @@ namespace MiniiERP1.Controllers
         [HttpPost]
         public async Task<ActionResult<PurchaseOrder>> CreatePurchaseOrder(PurchaseOrder purchaseOrder)
         {
-            if (!ModelState.IsValid)
+            var validationResult = ValidationService.ValidatePurchaseOrder(purchaseOrder);
+            if (!validationResult.IsValid)
             {
-                return BadRequest(ModelState);
+                foreach (var error in validationResult.Errors)
+                {
+                    _loggingService.LogValidationError("CreatePurchaseOrder", error);
+                }
+                return BadRequest(new { errors = validationResult.Errors });
             }
 
             var createdPurchaseOrder = await _purchaseOrderService.CreatePurchaseOrderAsync(purchaseOrder);

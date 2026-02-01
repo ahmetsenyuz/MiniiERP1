@@ -29,23 +29,40 @@ namespace MiniiERP1.Services
         {
             // Validate supplier
             if (supplier == null)
+            {
                 throw new ArgumentNullException(nameof(supplier));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.CompanyName))
+            if (string.IsNullOrEmpty(supplier.CompanyName))
+            {
                 throw new ArgumentException("Company name is required", nameof(supplier.CompanyName));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.ContactPerson))
+            if (string.IsNullOrEmpty(supplier.ContactPerson))
+            {
                 throw new ArgumentException("Contact person is required", nameof(supplier.ContactPerson));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.Phone))
+            if (string.IsNullOrEmpty(supplier.Phone))
+            {
                 throw new ArgumentException("Phone number is required", nameof(supplier.Phone));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.Email))
+            if (string.IsNullOrEmpty(supplier.Email))
+            {
                 throw new ArgumentException("Email is required", nameof(supplier.Email));
+            }
+
+            if (!IsValidEmail(supplier.Email))
+            {
+                throw new ArgumentException("Invalid email format", nameof(supplier.Email));
+            }
 
             // Check if company name is unique
             if (!await IsCompanyNameUniqueAsync(supplier.CompanyName))
+            {
                 throw new InvalidOperationException("A supplier with this company name already exists");
+            }
 
             // Assign ID and add to collection
             supplier.Id = _nextId++;
@@ -57,27 +74,46 @@ namespace MiniiERP1.Services
         public async Task<Supplier?> UpdateSupplierAsync(int id, Supplier supplier)
         {
             if (!_suppliers.ContainsKey(id))
+            {
                 return null;
+            }
 
             // Validate supplier
             if (supplier == null)
+            {
                 throw new ArgumentNullException(nameof(supplier));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.CompanyName))
+            if (string.IsNullOrEmpty(supplier.CompanyName))
+            {
                 throw new ArgumentException("Company name is required", nameof(supplier.CompanyName));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.ContactPerson))
+            if (string.IsNullOrEmpty(supplier.ContactPerson))
+            {
                 throw new ArgumentException("Contact person is required", nameof(supplier.ContactPerson));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.Phone))
+            if (string.IsNullOrEmpty(supplier.Phone))
+            {
                 throw new ArgumentException("Phone number is required", nameof(supplier.Phone));
+            }
 
-            if (string.IsNullOrWhiteSpace(supplier.Email))
+            if (string.IsNullOrEmpty(supplier.Email))
+            {
                 throw new ArgumentException("Email is required", nameof(supplier.Email));
+            }
+
+            if (!IsValidEmail(supplier.Email))
+            {
+                throw new ArgumentException("Invalid email format", nameof(supplier.Email));
+            }
 
             // Check if company name is unique (excluding current supplier)
             if (!await IsCompanyNameUniqueAsync(supplier.CompanyName, id))
+            {
                 throw new InvalidOperationException("A supplier with this company name already exists");
+            }
 
             // Update supplier
             supplier.Id = id;
@@ -100,6 +136,22 @@ namespace MiniiERP1.Services
                 s.Id != excludeId);
             
             return Task.FromResult(isUnique);
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

@@ -8,15 +8,18 @@ namespace MiniiERP1.Services
         private readonly IPurchaseOrderRepository _purchaseOrderRepository;
         private readonly IProductRepository _productRepository;
         private readonly ISupplierRepository _supplierRepository;
+        private readonly LoggingService _loggingService;
 
         public PurchaseOrderService(
             IPurchaseOrderRepository purchaseOrderRepository,
             IProductRepository productRepository,
-            ISupplierRepository supplierRepository)
+            ISupplierRepository supplierRepository,
+            LoggingService loggingService)
         {
             _purchaseOrderRepository = purchaseOrderRepository;
             _productRepository = productRepository;
             _supplierRepository = supplierRepository;
+            _loggingService = loggingService;
         }
 
         public async Task<PurchaseOrder?> GetPurchaseOrderByIdAsync(int id)
@@ -35,6 +38,7 @@ namespace MiniiERP1.Services
             var supplier = await _supplierRepository.GetByIdAsync(purchaseOrder.SupplierId);
             if (supplier == null)
             {
+                _loggingService.LogValidationError("CreatePurchaseOrder", "Invalid supplier reference");
                 return null;
             }
 
@@ -45,9 +49,10 @@ namespace MiniiERP1.Services
                 var product = await _productRepository.GetByIdAsync(item.ProductId);
                 if (product == null)
                 {
+                    _loggingService.LogValidationError("CreatePurchaseOrder", "Invalid product reference");
                     return null;
                 }
-                
+
                 item.UnitPrice = product.SellingPrice;
                 totalAmount += item.LineTotal;
             }
@@ -63,6 +68,7 @@ namespace MiniiERP1.Services
             var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(id);
             if (purchaseOrder == null || purchaseOrder.Status != PurchaseOrderStatus.Pending)
             {
+                _loggingService.LogValidationError("ConfirmPurchaseOrder", "Cannot confirm purchase order. It might not exist or is not in pending status.");
                 return null;
             }
 
@@ -87,6 +93,7 @@ namespace MiniiERP1.Services
             var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(id);
             if (purchaseOrder == null || purchaseOrder.Status != PurchaseOrderStatus.Pending)
             {
+                _loggingService.LogValidationError("CancelPurchaseOrder", "Cannot cancel purchase order. It might not exist or is not in pending status.");
                 return false;
             }
 
